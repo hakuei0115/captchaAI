@@ -5,8 +5,8 @@ def get_rand_color(min_val, max_val):
     """ Generate a random color """
     return (random.randint(min_val, max_val), random.randint(min_val, max_val), random.randint(min_val, max_val))
 
-def get_captcha_with_corrected_text_sizing(width, height):
-    """ Generate a captcha image with 6 random characters centered, correcting text sizing """
+def get_captcha_with_random_font_size(width, height):
+    """ Generate a captcha image with 6 random characters and random font sizes """
     # Define the character set
     char_set = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -29,10 +29,11 @@ def get_captcha_with_corrected_text_sizing(width, height):
         end = (start[0] + random.randint(0, 12), start[1] + random.randint(0, 12))
         draw.line([start, end], fill=line_color, width=1)
 
-    # Draw characters with fixed spacing
-    font = ImageFont.load_default()  # Default font
+    # Draw characters with random font sizes
     char_spacing = width // 6
     for i, char in enumerate(random_str):
+        font_size = random.randint(13, 25)  # Random font size between 15 and 25
+        font = ImageFont.load_default().font_variant(size=font_size)
         bbox = draw.textbbox((0, 0), char, font=font)
         char_width = bbox[2] - bbox[0]
         char_height = bbox[3] - bbox[1]
@@ -43,8 +44,9 @@ def get_captcha_with_corrected_text_sizing(width, height):
     return image, random_str
 
 # Example usage
-captcha_image_corrected, captcha_str = get_captcha_with_corrected_text_sizing(120, 50)
-captcha_image_corrected.show()  # This will open the image in the default image viewer
+captcha_image_random_font, captcha_str_random_font = get_captcha_with_random_font_size(150, 50)
+print(captcha_str_random_font)
+# captcha_image_random_font.show()  # This will open the image in the default image viewer
 
 # To display the image in this notebook environment, we convert it to a format compatible with Jupyter
-captcha_image_corrected.save("captcha_corrected_text_sizing.png")
+captcha_image_random_font.save("captcha_random_font_size.png")
