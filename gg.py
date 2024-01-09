@@ -1,35 +1,50 @@
 from PIL import Image, ImageDraw, ImageFont
 import random
 
-def generate_verification_code(length=4):
-    # 產生隨機驗證碼
-    verification_code = ''.join(random.choices('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', k=length))
+def get_rand_color(min_val, max_val):
+    """ Generate a random color """
+    return (random.randint(min_val, max_val), random.randint(min_val, max_val), random.randint(min_val, max_val))
 
-    # 設定圖片大小和背景色
-    width, height = 150, 50
-    background_color = (255, 255, 255)
+def get_captcha_with_corrected_text_sizing(width, height):
+    """ Generate a captcha image with 6 random characters centered, correcting text sizing """
+    # Define the character set
+    char_set = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-    # 建立一個白色背景的圖片
-    image = Image.new('RGB', (width, height), background_color)
+    # Generate a random string of 6 characters
+    random_str = ''.join(random.choices(char_set, k=6))
+
+    # Create a new image with white background
+    image = Image.new('RGB', (width, height), (255, 255, 255))
     draw = ImageDraw.Draw(image)
 
-    # 設定字體和字體大小
-    font_size = 25
-    font = ImageFont.truetype('arial.ttf', font_size)
+    # Fill background with random color
+    draw.rectangle([(0, 0), (width, height)], fill=get_rand_color(200, 250))
 
-    # 在圖片上繪製文字
-    text_position = ((width - font_size * length) / 2, (height - font_size) / 2)
-    draw.text(text_position, verification_code, font=font, fill=(0, 0, 0))
+    # Set a uniform color for interference lines
+    line_color = get_rand_color(160, 200)
 
-    # 產生干擾線
-    for _ in range(5):
-        line_color = tuple(random.randint(0, 255) for _ in range(3))
-        line_start = (random.randint(0, width), random.randint(0, height))
-        line_end = (random.randint(0, width), random.randint(0, height))
-        draw.line([line_start, line_end], fill=line_color, width=2)
+    # Draw random interference lines with uniform color
+    for _ in range(155):
+        start = (random.randint(0, width), random.randint(0, height))
+        end = (start[0] + random.randint(0, 12), start[1] + random.randint(0, 12))
+        draw.line([start, end], fill=line_color, width=1)
 
-    # 儲存圖片
-    image.save('verification_code.png')
+    # Draw characters with fixed spacing
+    font = ImageFont.load_default()  # Default font
+    char_spacing = width // 6
+    for i, char in enumerate(random_str):
+        bbox = draw.textbbox((0, 0), char, font=font)
+        char_width = bbox[2] - bbox[0]
+        char_height = bbox[3] - bbox[1]
+        x = char_spacing * i + (char_spacing - char_width) // 2
+        y = (height - char_height) // 2
+        draw.text((x, y), char, font=font, fill=get_rand_color(20, 130))
 
-if __name__ == "__main__":
-    generate_verification_code()
+    return image, random_str
+
+# Example usage
+captcha_image_corrected, captcha_str = get_captcha_with_corrected_text_sizing(120, 50)
+captcha_image_corrected.show()  # This will open the image in the default image viewer
+
+# To display the image in this notebook environment, we convert it to a format compatible with Jupyter
+captcha_image_corrected.save("captcha_corrected_text_sizing.png")
