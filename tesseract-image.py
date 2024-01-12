@@ -35,7 +35,7 @@ def custom_ocr(image):
     
     return cleaned_text
 
-for i in range(200, 301):
+for i in range(301, 401):
     captcha_path = f"train_data/image{i}.jpg"
     processed_image = preprocess_captcha(captcha_path)    
     # processed_image.save(f"trash/processed_image{i}.jpg")

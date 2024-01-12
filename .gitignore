@@ -2,3 +2,4 @@ train_data/
 trash/
 validation_data/
 image_recognition_model.h5
+company.txt

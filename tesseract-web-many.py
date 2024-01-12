@@ -119,6 +119,10 @@ def scrape_and_submit(number):
                         time.sleep(2)
                         image = download_and_preprocess_captcha(driver)
                         result = custom_ocr(image)
+                        if result == "" or result is None or len(result) != 6 or re.fullmatch("^[a-zA-Z0-9]+$", result) is None:
+                            # 任一條件滿足就繼續迴圈
+                            print("Continue loop")
+                            continue
                         input3.clear()
                         input3.send_keys(result)
                         button_element.click()
@@ -130,7 +134,7 @@ def scrape_and_submit(number):
             print(f"Error: {e}")
         
         time.sleep(3)
-        
+
         person_company = driver.find_elements(By.CSS_SELECTOR, ".col-6.text-right.text-md-left")
         person_serial_number = person_company[0].text
         person_business_status = driver.find_element(By.CSS_SELECTOR, ".col-6.text-right.text-md-left.text-red-dark").text
@@ -145,9 +149,8 @@ def scrape_and_submit(number):
         )
         p_text = p_element.text
 
-        with open('company.txt', "w", encoding='utf-8') as file:
-            file.write(f"營業人統一編號:{person_serial_number}, 營業狀況:{person_business_status}, 營業人名稱:{company_name}, 組織種類:{company_type}, {p_text}")
-        # print(f"營業人統一編號:{person_serial_number}, 營業狀況:{person_business_status}, 營業人名稱:{company_name}, 組織種類:{company_type}, {p_text}")
+        return person_serial_number, person_business_status, company_name, company_type, p_text
+        
     finally:
         try:
             # 等待瀏覽器完全關閉
@@ -160,5 +163,8 @@ def scrape_and_submit(number):
 
 
 if __name__ == '__main__':
-    number = "70747419"
-    scrape_and_submit(number)
+    numbers = ["70747419", "03077208"]
+    for number in numbers:
+        person_serial_number, person_business_status, company_name, company_type, p_text = scrape_and_submit(number)
+        with open('company.txt', "w", encoding='utf-8') as file:
+            file.write(f"營業人統一編號:{person_serial_number}, 營業狀況:{person_business_status}, 營業人名稱:{company_name}, 組織種類:{company_type}, {p_text}\n")
