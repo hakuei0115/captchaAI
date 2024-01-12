@@ -8,7 +8,8 @@ def get_rand_color(min_val, max_val):
 def get_captcha_with_random_font_size(width, height):
     """ 產生一個帶有6個隨機字元和隨機字體大小的驗證碼圖片 """
     # 定義字元集合
-    char_set = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    # char_set = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    char_set = 'fghklQWmw'
 
     # 生成一個包含6個隨機字元的字串
     random_str = ''.join(random.choices(char_set, k=6))
@@ -32,8 +33,10 @@ def get_captcha_with_random_font_size(width, height):
     # 用隨機字體大小繪製字元
     char_spacing = width // 6
     for i, char in enumerate(random_str):
+        font_path = "arial.ttf"
         font_size = random.randint(20, 32)  # 隨機字體大小在15到25之間
-        font = ImageFont.load_default().font_variant(size=font_size)
+        # font = ImageFont.load_default().font_variant(size=font_size)
+        font = ImageFont.truetype(font_path, size=font_size)
         bbox = draw.textbbox((0, 0), char, font=font)
         char_width = bbox[2] - bbox[0]
         char_height = bbox[3] - bbox[1]

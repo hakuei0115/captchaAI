@@ -14,7 +14,7 @@ chrome_options.add_argument('--headless')
 # select1 = Select(select1_element)
 # select1.select_by_visible_text("112年07月~08月")
 
-for i in range(1, 21):
+for i in range(301, 401):
     driver = webdriver.Chrome(options=chrome_options)
 
     url = "https://www.etax.nat.gov.tw/etwmain/etw113w2"
@@ -25,7 +25,7 @@ for i in range(1, 21):
     img_element = driver.find_element(By.CSS_SELECTOR, 'img.mr-2')
     img_url = img_element.get_attribute("src")
     response = requests.get(img_url)
-    with open(f'validation_data/image{i}.jpg', "wb") as img_file:
+    with open(f'train_data/image{i}.jpg', "wb") as img_file:
         img_file.write(response.content)
     
     time.sleep(3)
