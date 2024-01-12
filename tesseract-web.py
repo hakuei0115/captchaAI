@@ -4,17 +4,9 @@ Copyright (c) hakuei(https://github.com/hakuei0115)
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
-"""
-這個程式是用來爬取並自動提交稅務網站上的表單
-主要目的是處理驗證碼,確保表單的正確提交
-這個腳本使用Selenium和Tesseract OCR來實現自動化流程 https://digi.bib.uni-mannheim.de/tesseract/
-在執行之前,請確保已經安裝必要的庫,如selenium、pytesseract等
-"""
-
 import os
 import re
 import time
-import string
 import requests
 import pytesseract
 from PIL import Image, ImageOps, ImageFilter
