@@ -11,7 +11,7 @@ Before running the program, make sure you have installed the required libraries.
 1. Install necessary packages
 
 ```bash
-pip install request
+pip install requests
 pip install pillow
 pip install selenium
 pip install pytesseract
