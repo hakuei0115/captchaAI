@@ -4,28 +4,30 @@ Copyright (c) hakuei(https://github.com/hakuei0115)
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
+
 import os
 import re
 import time
+import logging
 import requests
 import pytesseract
 from PIL import Image, ImageOps, ImageFilter
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
+logging.basicConfig(filename='crawler.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def custom_ocr(image):
+    custom_config = r'--oem 1'  # 使用 OCR 引擎模式 1 (LSTM)
     # 使用 pytesseract 辨識文字
-    text = pytesseract.image_to_string(image, lang='eng')
+    text = pytesseract.image_to_string(image, lang='eng', config=custom_config)
     
-    cleaned_text = text.replace(" ", "").replace("\n", "").replace("\r", "")
+    cleaned_text = text.strip().replace(" ", "").replace("\n", "").replace("\r", "")
 
     return cleaned_text
-
 
 def preprocess_captcha(captcha_path):
     # 讀取圖片
@@ -46,9 +48,8 @@ def preprocess_captcha(captcha_path):
     
     return cleaned_image
 
-
 def download_and_preprocess_captcha(driver):
-    img_element = driver.find_element(By.CSS_SELECTOR, 'img.mr-2')
+    img_element = wait_for_element(driver, By.CSS_SELECTOR, 'img.mr-2')
     img_url = img_element.get_attribute("src")
     response = requests.get(img_url)
 
@@ -58,107 +59,83 @@ def download_and_preprocess_captcha(driver):
     captcha_image = preprocess_captcha('tmp_image.jpg')
     return captcha_image
 
-
-def scrape_and_submit(number):
-    # 初始化 WebDriver
-    driver = webdriver.Chrome()
-
+def wait_for_element(driver, by, value, timeout=10):
     try:
-        # 打開網頁
-        url = "https://www.etax.nat.gov.tw/etwmain/etw113w1/ban/query"
-        driver.get(url)
-        time.sleep(2)
-
-        # 輸入發票號碼範圍
-        input1 = driver.find_element("id", "ban")
-        input1.send_keys(number)
-
-        # 下載並處理驗證碼圖片
-        image = download_and_preprocess_captcha(driver)
-    
-        # 辨識文字
-        result = custom_ocr(image)
-
-        # 如果辨識結果不符合預期，重新處理驗證碼
-        while True:
-            print(f"Result: {result}, Length: {len(result)}")
-            button_refresh = driver.find_element(By.CSS_SELECTOR, ".btn.btn-outline-brown-light.etw-icon.etw-refresh.mr-2")
-            button_refresh.click()
-            time.sleep(2)
-            image = download_and_preprocess_captcha(driver)
-            result = custom_ocr(image)
-            if result == "" or result is None or len(result) != 6 or re.fullmatch("^[a-zA-Z0-9]+$", result) is None:
-                # 任一條件滿足就繼續迴圈
-                print("Continue loop")
-                continue
-            else:
-                # 所有條件都不滿足，跳出迴圈
-                print("Break loop")
-                break
-
-        # 輸入辨識結果
-        input3 = driver.find_element("id", "captchaText")
-        input3.send_keys(result)
-
-        # 提交表單
-        button_element = driver.find_element("css selector", "button[type='submit']")
-        button_element.click()
-
-        time.sleep(1)
-
-        try:
-            div_check = driver.find_element(By.ID, "dialog-desc")
-            if div_check:
-                while True:
-                    try:
-                        print('驗證中.....')
-                        # 驗證碼錯誤，重新處理
-                        time.sleep(2)
-                        button_check = driver.find_element(By.CSS_SELECTOR, ".btn.btn-outline-dark")
-                        button_check.click()
-                        time.sleep(2)
-                        image = download_and_preprocess_captcha(driver)
-                        result = custom_ocr(image)
-                        input3.clear()
-                        input3.send_keys(result)
-                        button_element.click()
-                    except (NoSuchElementException, StaleElementReferenceException):
-                        # 如果找不到元素或發生 StaleElementReferenceException，則跳出迴圈
-                        print("找不到訊息 div，或元素不在 DOM 中")
-                        break
-        except Exception as e:
-            print(f"Error: {e}")
-        
-        time.sleep(3)
-        
-        person_company = driver.find_elements(By.CSS_SELECTOR, ".col-6.text-right.text-md-left")
-        person_serial_number = person_company[0].text
-        person_business_status = driver.find_element(By.CSS_SELECTOR, ".col-6.text-right.text-md-left.text-red-dark").text
-        company_name = person_company[3].text
-        company_type = person_company[6].text
-
-        # 檢查是否有發票
-        button_check_bill = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".btn.btn-brown-light.ml-0.ml-md-2.mr-2")))
-        button_check_bill.click()
-        p_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, 'text-justify.text-red-dark.mb-0'))
+        return WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located((by, value))
         )
-        p_text = p_element.text
+    except TimeoutException as e:
+        raise NoSuchElementException(logging.error(f"元素未在指定時間內找到: {by} - {value}. 詳細錯誤: {e}"))
 
-        with open('company.txt', "w", encoding='utf-8') as file:
-            file.write(f"營業人統一編號:{person_serial_number}, 營業狀況:{person_business_status}, 營業人名稱:{company_name}, 組織種類:{company_type}, {p_text}")
-        # print(f"營業人統一編號:{person_serial_number}, 營業狀況:{person_business_status}, 營業人名稱:{company_name}, 組織種類:{company_type}, {p_text}")
-    finally:
+def wait_and_click(driver, by, value, timeout=10):
+    try:
+        WebDriverWait(driver, timeout).until(EC.presence_of_element_located((by, value))).click()
+    except TimeoutException as e:
+        raise NoSuchElementException(logging.error(f"元素未在指定時間內找到: {by} - {value}. 詳細錯誤: {e}"))
+
+def is_valid_result(result):
+    return len(result) == 6 and re.fullmatch("^[a-zA-Z0-9]+$", result)
+
+def main(number):
+    with webdriver.Chrome() as driver:
         try:
-            # 等待瀏覽器完全關閉
-            WebDriverWait(driver, 10).until(lambda x: x.service.process is None)
-        except TimeoutException:
-            print("等待瀏覽器關閉超時")
+            url = "https://www.etax.nat.gov.tw/etwmain/etw113w1/ban/query"
+            driver.get(url)
 
-        # 刪除暫存圖片
-        os.remove('tmp_image.jpg')
+            # 輸入發票號碼範圍
+            input1 = wait_for_element(driver, By.ID, "ban")
+            input1.send_keys(number)
 
+            while True:
+                image = download_and_preprocess_captcha(driver)
 
-if __name__ == '__main__':
+                result = custom_ocr(image)
+
+                while not is_valid_result(result):
+                    print(f"Result: {result}, Length: {len(result)}")
+                    logging.error(f"辨識結果不合法: {result}")
+                    button_refresh = driver.find_element(By.CSS_SELECTOR, ".btn.btn-outline-brown-light.etw-icon.etw-refresh.mr-2")
+                    button_refresh.click()
+                    time.sleep(2)
+                    image = download_and_preprocess_captcha(driver)
+                    result = custom_ocr(image)
+                
+                # 輸入辨識結果
+                input3 = driver.find_element("id", "captchaText")
+                input3.send_keys(result)
+
+                wait_and_click(driver, By.CSS_SELECTOR, "button[type='submit']")
+
+                time.sleep(1)
+
+                if driver.current_url != url:
+                    break
+
+                try:
+                    print("you are waiting for button to load")
+                    wait_and_click(driver, By.CSS_SELECTOR, ".btn.btn-outline-dark")
+                except TimeoutException as ea:
+                    logging.error(f"按鈕載入超時. 詳細錯誤: {ea}")
+                    print("Timed out waiting for button to load")
+
+            # 檢查是否有發票
+            wait_and_click(driver, By.CSS_SELECTOR, ".btn.btn-brown-light.ml-0.ml-md-2.mr-2")
+
+            bill_check = wait_for_element(driver, By.CLASS_NAME, 'text-justify.text-red-dark.mb-0').text
+
+            person_company = driver.find_elements(By.CSS_SELECTOR, ".col-6.text-right.text-md-left")
+            person_serial_number = person_company[0].text
+            person_business_status = driver.find_element(By.CSS_SELECTOR, ".col-6.text-right.text-md-left.text-red-dark").text
+            company_name = person_company[3].text
+            company_type = person_company[6].text
+            print(f"營業人統一編號:{person_serial_number}, 營業狀況:{person_business_status}, 營業人名稱:{company_name}, 組織種類:{company_type}, {bill_check}")
+        
+        except Exception as e:
+            logging.warning(f"發生例外: {e}")
+
+        finally:
+            os.remove('tmp_image.jpg')
+
+if __name__ == "__main__":
     number = "70747419"
-    scrape_and_submit(number)
+    main(number)

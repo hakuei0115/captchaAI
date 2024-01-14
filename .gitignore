@@ -3,3 +3,4 @@ trash/
 validation_data/
 image_recognition_model.h5
 company.txt
+crawler.log
