@@ -11,6 +11,7 @@ Before running the program, make sure you have installed the required libraries.
 1. Install necessary packages
 
 ```bash
+pip install flask
 pip install requests
 pip install pillow
 pip install selenium
@@ -28,12 +29,14 @@ pip install pytesseract
 
 ## User Guide
 
-You only need to use tesseract-web.py and tesseract-web-many.py. Below are the usage instructions.
+You only need to use app.py and tesseract-web.py. Below are the usage instructions.
 
+- app
+
+  - Run app.py to open the webpage. In your browser, navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000). Once on the webpage, input a `number`, click "Submit" to initiate the web crawling process. The results will be displayed on the webpage. If `None` appears, it means the entered value is incorrect; please re-enter a valid one. To close the webpage, use `Ctrl + C` in the terminal.
 - tesseract-web
+
   - Simply modify the variable `number` with the desired value and execute the script. If the process is unexpectedly interrupted, you can restart it.
-- tesseract-web-many
-  - This script allows you to scrape multiple business registration numbers at once and save the results to a txt file.
 
 If you have any problem, just email me.
 
