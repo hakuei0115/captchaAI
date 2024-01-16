@@ -4,21 +4,23 @@ Copyright (c) hakuei(https://github.com/hakuei0115)
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
-
 import os
 import re
 import time
+import flask
 import logging
 import requests
 import pytesseract
 from PIL import Image, ImageOps, ImageFilter
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 logging.basicConfig(filename='crawler.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+app = flask.Flask(__name__)
 
 def custom_ocr(image):
     custom_config = r'--oem 1'  # 使用 OCR 引擎模式 1 (LSTM)
@@ -70,8 +72,10 @@ def wait_and_click(driver, by, value, timeout=10):
 def is_valid_result(result):
     return len(result) == 6 and re.fullmatch("^[a-zA-Z0-9]+$", result)
 
-def main(number):
-    with webdriver.Chrome() as driver:
+def webcrawler(number):
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
+    with webdriver.Chrome(options=chrome_options) as driver:
         try:
             url = "https://www.etax.nat.gov.tw/etwmain/etw113w1/ban/query"
             driver.get(url)
@@ -122,7 +126,8 @@ def main(number):
             person_business_status = driver.find_element(By.CSS_SELECTOR, ".col-6.text-right.text-md-left.text-red-dark").text
             company_name = person_company[3].text
             company_type = person_company[6].text
-            print(f"營業人統一編號:{person_serial_number}, 營業狀況:{person_business_status}, 營業人名稱:{company_name}, 組織種類:{company_type}, {bill_check}")
+            return person_serial_number, person_business_status, company_name, company_type, bill_check
+            # print(f"營業人統一編號:{person_serial_number}, 營業狀況:{person_business_status}, 營業人名稱:{company_name}, 組織種類:{company_type}, {bill_check}")
         
         except Exception as e:
             logging.warning(f"發生例外: {e}")
@@ -130,6 +135,15 @@ def main(number):
         finally:
             os.remove('tmp_image.jpg')
 
+@app.route('/')
+def index():
+    return flask.render_template('index.html')
+
+@app.route('/process', methods=['POST'])
+def process():
+    number = flask.request.form['input_data']
+    result = webcrawler(number)
+    return flask.render_template('index.html', input_data=result)
+
 if __name__ == "__main__":
-    number = "70747419"
-    main(number)
+    app.run(host='0.0.0.0', port=5000, debug=True)
